@@ -34,19 +34,19 @@ public class MakeFont {
             { 0x20bf , 0x20bf ,0}, // BitCoin Sign
             { 0x2122 , 0x2122 ,0}, // (TM)
             { 0x2212 , 0x2212 ,0}, // minus
-            //{ 0x0100 , 0xffff ,0},
             { 0xfffd , 0xfffe ,0},
             { 0x0100 , 0x024f ,0}, // Latin Extended-A, Latin Extended-B
             { 0x0370 , 0x03ff ,0}, // Greek, Coptic
             { 0x0400 , 0x04ff ,0}, // cyrillic
             { 0x0500 , 0x052f ,0}, // cyrillic supplement
             { 0x1e00 , 0x1eff ,1}, // Latin Extended Additional
+            { 0x1f00 , 0xfff0 ,0},
     };
 
     public static void main(String[] args) throws IOException, FontFormatException {
 
-        // File _ttf = new File(".../NotoSans-Regular.otf");
-        // makeFont(_ttf,32,512,new File("."),"noto-sans-32", _chars);
+        File _ttf = new File("src/main/resources/canada1500-rg.otf");
+        makeFont(_ttf,32,512,new File("."),"canada1500-rg-32", _chars);
 
     }
 
@@ -138,7 +138,7 @@ public class MakeFont {
         _pw.println("common lineHeight="+_size+" base="+_size+" scaleW="+_xyres+" scaleH="+_xyres+" pages="+(_page+1)+" packed=0");
         for(int _i=0; _i<_page+1; _i++)
         {
-            _pw.println("page id="+_i+" file=\""+_prefix+"."+_page+".png\"");
+            _pw.println("page id="+_i+" file=\""+_prefix+"."+_i+".png\"");
         }
         _pw.println("chars count="+_count);
         _pw.println(_sw.getBuffer().toString());

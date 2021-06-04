@@ -14,15 +14,24 @@
  * limitations under the License.
  */
 
+import com.badlogic.gdx.backends.headless.HeadlessFiles;
+import com.badlogic.gdx.backends.headless.HeadlessNativesLoader;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeType;
+
+import lombok.SneakyThrows;
+
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.font.LineMetrics;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 
-public class MakeFont {
+public class MakeFont
+{
 
     static int[][] _chars = {
             { 0x0020 , 0x007e ,0}, // Basic Latin, ASCII
@@ -62,96 +71,89 @@ public class MakeFont {
             //{ 0x1f00 , 0xfff0 ,0},
     };
 
-    public static void main(String[] args) throws IOException, FontFormatException {
-
+    @SneakyThrows
+    public static void main(String[] args)
+    {
         File _ttf = new File("/data/fredo/_fontz/_pub/Noto-Sans/Noto_Sans_JP/NotoSansJP-Regular.otf");
         makeFont(_ttf,32,4096,new File("."),"noto-sans-jp-32", _chars);
-
     }
 
-    public static void makeFont(File _ttf, int _size, int _xyres, File _outdir, String _prefix, int[][] _codesets) throws IOException, FontFormatException
+    @SneakyThrows
+    public static void makeFont(File _ttf, int _size, int _xyres, File _outdir, String _prefix, int[][] _codesets)
     {
-        Font _fnt = Font.createFont(Font.TRUETYPE_FONT, _ttf).deriveFont((float)_size);
         BufferedImage _im = null;
-        Graphics2D _g = null;
+
+        HeadlessNativesLoader.load();
+        HeadlessFiles _files = new HeadlessFiles();
+
+        face = library.newFace(_files.absolute(_ttf.getAbsolutePath()),0);
+        face.setPixelSizes(0,_size);
+
+
+        byte[] _bw = {0, (byte) 96, (byte) 192, (byte) 255};
+        IndexColorModel _icm = new IndexColorModel(2, _bw.length,_bw,_bw,_bw,_bw);
 
         StringWriter _sw = new StringWriter();
         PrintWriter _pw = new PrintWriter(_sw);
 
-        byte[] _bw = {0, (byte) 255};
-        IndexColorModel _icm = new IndexColorModel(1, 2,_bw,_bw,_bw,0);
         int _page = 0;
         int _count = 0;
         int _y = 0;
         int _x = 0;
-        boolean _stop =  false;
-        for(int[] _charr : _codesets)
-            for(int _char=_charr[0]; _char<(_charr[1]+1); _char++)
+
+        for(int[] _charr : _codesets) for(int _char=_charr[0]; _char<(_charr[1]+1); _char++)
+        {
+            if(_im==null)
             {
-                if(_im==null)
-                {
-                    _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_INDEXED,_icm);
-                    //_im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_INT_ARGB);
-                    _g = (Graphics2D) _im.getGraphics();
-                    _g.setRenderingHint(
-                            RenderingHints.KEY_TEXT_ANTIALIASING,
-                            RenderingHints.VALUE_TEXT_ANTIALIAS_GASP);
+                _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_INDEXED,_icm);
+                //_im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_INT_ARGB);
 
-                    _g.setRenderingHint(
-                            RenderingHints.KEY_ALPHA_INTERPOLATION,
-                            RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
-
-                    _g.setComposite(AlphaComposite.Clear);
-                    _g.fillRect(0, 0, _xyres, _xyres);
-
-                    _g.setComposite(AlphaComposite.Src);
-                    _g.setColor(Color.WHITE);
-                    _g.setFont(_fnt);
-                    _y = 0;
-                    _x = 0;
-                }
-
-                if(!_fnt.canDisplay(_char))
-                {
-                    _pw.println(MessageFormat.format("char id={0,number,######0} x={1} y={2} width=0 height=0 xoffset=0 yoffset=0 xadvance={3} page=0 chnl=0 ",_char, _x, _y, _size));
-                    _count++;
-                    continue;
-                }
-
-                if((_charr[2]==1) && !Character.isAlphabetic(_char))
-                {
-                    continue;
-                }
-
-                FontMetrics _fm = new Canvas().getFontMetrics(_fnt);
-
-                String _s = Character.toString((char) _char);
-                LineMetrics _lm = _fm.getLineMetrics(_s, _g);
-                int _w = (int)_fm.charWidth(_char);
-                int _h = (int)_lm.getHeight();
-                int _d = (int)_lm.getDescent();
-
-                _g.drawString(_s, _x, _h+(_y)-_d);
-
-                _pw.println(MessageFormat.format("char id={0,number,######0} x={1} y={2} width={3} height={4} xoffset=0 yoffset={5} xadvance={6} page={7} chnl=0 ",_char, _x, _y, _w, _h, _d, _w+1, _page));
-
-                _count++;
-
-                _x+=_w+2;
-                if(_x+_size > _xyres)
-                {
-                    _y+=_h+2;
-                    _x=0;
-                }
-
-                if(_y+(_size*2) > _xyres)
-                {
-                    ImageIO.write(_im,"png", new File(_outdir,_prefix+"."+_page+".png"));
-                    _page++;
-                    _g.dispose();
-                    _im=null;
-                }
+                _y = 0;
+                _x = 0;
             }
+
+            FreeType.Glyph _gl = getGlyph((char) _char);
+            if(_gl==null){
+                continue;
+            }
+
+            Pixmap _px = getPixmap(_gl);
+
+            System.err.println("w="+_px.getWidth()+" h="+_px.getHeight());
+
+            ByteBuffer _buf = _px.getPixels();
+            int _j = 0;
+            while(_buf.hasRemaining()) {
+                for(int _i=0; _i<_px.getWidth(); _i++)
+                {
+                    int _color = _buf.getInt();
+                    if((_color & 0xff) > 0) {
+                        _im.setRGB(_x + _i, _y + _j, _color);
+                    }
+                }
+                _j++;
+            }
+
+            _pw.println(MessageFormat.format("char id={0,number,######0} x={1,number,######0} y={2,number,######0} width={3} height={4} xoffset=0 yoffset={5} xadvance={6} page={7} chnl=0 ",_char, _x, _y, _px.getWidth(), _px.getHeight(), _gl.getLeft(), _gl.getTop(), _page));
+
+            _count++;
+
+            _x+=_px.getWidth()+2;
+            if(_x+_size > _xyres)
+            {
+                //_y+=_px.getHeight()+2;
+                _y+=_size+2;
+                _x=0;
+            }
+
+            if(_y+(_size*2) > _xyres)
+            {
+                ImageIO.write(_im,"png", new File(_outdir,_prefix+"."+_page+".png"));
+                _page++;
+                _im=null;
+            }
+        }
+
         _pw.flush();
         _pw.close();
 
@@ -169,6 +171,25 @@ public class MakeFont {
         ImageIO.write(_im,"png", new File(_outdir,_prefix+"."+_page+".png"));
     }
 
+    static FreeType.Library library = FreeType.initFreeType();;
+    static FreeType.Face face;
+
+    public static FreeType.Glyph getGlyph(char c) {
+        boolean missing = face.getCharIndex(c) == 0 && c != 0;
+        if (missing) return null;
+
+        face.loadChar(c, FreeType.FT_LOAD_DEFAULT | FreeType.FT_LOAD_FORCE_AUTOHINT);
+
+        FreeType.GlyphSlot slot = face.getGlyph();
+        return slot.getGlyph();
+    }
+
+    public static Pixmap getPixmap(FreeType.Glyph mainGlyph) {
+        mainGlyph.toBitmap(FreeType.FT_RENDER_MODE_NORMAL);
+
+        FreeType.Bitmap mainBitmap = mainGlyph.getBitmap();
+        return mainBitmap.getPixmap(Pixmap.Format.RGBA8888, Color.WHITE, 1f);
+    }
 }
 
 /*

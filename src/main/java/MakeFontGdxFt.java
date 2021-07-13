@@ -19,94 +19,153 @@ import com.badlogic.gdx.backends.headless.HeadlessNativesLoader;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeType;
+
 import lombok.SneakyThrows;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 
-public class MakeFont
+public class MakeFontGdxFt
 {
-    public static int[][] _chars = {
-            { 0x0020 , 0x007e ,0}, // Basic Latin, ASCII
-            { 0x00a1 , 0x00ff ,0}, // Latin-1 Supplement
-            { 0x0100 , 0x024f ,0}, // Latin Extended-A, Latin Extended-B
-            { 0x02C6 , 0x02C7 ,0}, // Circumflex, Caron
-            { 0x02D8 , 0x02DD ,0}, // Breve, Dot Above, Ring Above, Ogonek, Small Tilde, Double Acute Accent
-            { 0x0370 , 0x03ff ,0}, // Greek, Coptic
-            { 0x0400 , 0x04ff ,0}, // cyrillic
-            //{ 0x0500 , 0x052f ,0}, // cyrillic supplement
-            //{ 0x1e00 , 0x1eff ,1}, // Latin Extended Additional
-            { 0x2010 , 0x205f ,0}, // General Punctuation
-            { 0x20a0 , 0x20bf ,0}, // Currency Symbols -- Pound Sign, Euro Sign, BitCoin Sign
-            { 0x2122 , 0x2122 ,0}, // (TM)
-            { 0x2212 , 0x2212 ,0}, // minus
-            /*
-            { 0x2190 , 0x21FF ,0}, // Arrows
-            { 0x2E80 , 0x2EFF ,0}, // CJK Radicals Supplement	128	115	Han
-            { 0x2F00 , 0x2FDF ,0}, // Kangxi Radicals	224	214	Han
-            { 0x2FF0 , 0x2FFF ,0}, // Ideographic Description Characters	16	12	Common
-            { 0x3000 , 0x303F ,0}, // CJK Symbols and Punctuation	64	64	Han (15 characters), Hangul (2 characters), Common (43 characters), Inherited (4 characters)
-            { 0x3040 , 0x309F ,0}, // Hiragana	96	93	Hiragana (89 characters), Common (2 characters), Inherited (2 characters)
-            { 0x30A0 , 0x30FF ,0}, // Katakana	96	96	Katakana (93 characters), Common (3 characters)
-            { 0x3100 , 0x312F ,0}, // Bopomofo	48	43	Bopomofo
-            { 0x3130 , 0x318F ,0}, // Hangul Compatibility Jamo	96	94	Hangul
-            { 0x3190 , 0x319F ,0}, // Kanbun	16	16	Common
-            { 0x31A0 , 0x31BF ,0}, // Bopomofo Extended	32	32	Bopomofo
-            { 0x31C0 , 0x31EF ,0}, // CJK Strokes	48	36	Common
-            { 0x31F0 , 0x31FF ,0}, // Katakana Phonetic Extensions	16	16	Katakana
-            { 0x3200 , 0x32FF ,0}, // Enclosed CJK Letters and Months	256	255	Hangul (62 characters), Katakana (47 characters), Common (146 characters)
-            { 0x3300 , 0x33FF ,0}, // CJK Compatibility	256	256	Katakana (88 characters), Common (168 characters)
-            { 0x3400 , 0x4DBF ,0}, // CJK Unified Ideographs Extension A	6,592	6,592	Han
-            { 0x4DC0 , 0x4DFF ,0}, // Yijing Hexagram Symbols	64	64	Common
-            { 0x4E00 , 0x9FFF ,0}, // CJK Unified Ideographs	20,992	20,989	Han
-            { 0xF900 , 0xFAFF ,0}, // CJK Compatibility Ideographs	512	472	Han
-            */
-
-            { 0xfffd , 0xfffe ,0},
-            //{ 0x1f00 , 0xfff0 ,0},
-    };
 
     @SneakyThrows
-    public static void main(String[] args) throws IOException, FontFormatException {
-
-        File _ttf = new File("/data/fredo/_fontz/_pub/Lato/Lato-Regular.ttf");
-        makeFont(_ttf,16,512,new File("."),"lato-16", _chars);
-
-    }
-    @SneakyThrows
-    public static void main_(String[] args)
+    public static void makeFont(File _ttf, int _size, int _xyres, File _outdir, String _prefix, int[][] _codesets, IndexColorModel _icm, float _gamma)
     {
-        File _ttf = new File("/data/fredo/_fontz/_pub/Noto-Sans/Noto_Sans_JP/NotoSansJP-Regular.otf");
-        makeFont(_ttf,32,4096,new File("."),"noto-sans-jp-32", _chars);
+        BufferedImage _im = null;
+
+        HeadlessNativesLoader.load();
+        HeadlessFiles _files = new HeadlessFiles();
+
+        face = library.newFace(_files.absolute(_ttf.getAbsolutePath()),0);
+        face.setPixelSizes(0,_size);
+
+
+        StringWriter _sw = new StringWriter();
+        PrintWriter _pw = new PrintWriter(_sw);
+
+        int _page = 0;
+        int _count = 0;
+        int _y = 0;
+        int _x = 0;
+
+        for(int[] _charr : _codesets) for(int _char=_charr[0]; _char<(_charr[1]+1); _char++)
+        {
+            if(_im==null)
+            {
+                if(_icm == null)
+                {
+                    _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_INT_ARGB);
+                }
+                /*
+                else if(_icm.getMapSize()==2)
+                {
+                    _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_BINARY);
+                }
+
+                */
+                else
+                {
+                    _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_INDEXED,_icm);
+                }
+
+                _y = 0;
+                _x = 0;
+            }
+
+            FreeType.Glyph _gl = getGlyph((char) _char);
+            if(_gl==null){
+                continue;
+            }
+
+            Pixmap _px = getPixmap(_gl);
+
+            System.err.println("w="+_px.getWidth()+" h="+_px.getHeight());
+
+            ByteBuffer _buf = _px.getPixels();
+            int _j = 0;
+            while(_buf.hasRemaining()) {
+                for(int _i=0; _i<_px.getWidth(); _i++)
+                {
+                    int _color = _buf.getInt();
+                    if((_color & 0xff) > 0) {
+                        if(_gamma>0f)
+                        {
+                            _color = (int) (Math.pow(((float)(_color&0xff))/255f, 1f/_gamma)*256f);
+                            if(_color>255) _color = 255;
+                            _color |= 0xffffff00;
+                        }
+                        if(_icm == null)
+                        {
+                            _im.setRGB(_x + _i, _y + _j, Integer.rotateLeft(_color,24));
+                        }
+                        else
+                        {
+                            _im.setRGB(_x + _i, _y + _j, _color);
+                        }
+                    }
+                }
+                _j++;
+            }
+
+            _pw.println(MessageFormat.format("char id={0,number,######0} x={1,number,######0} y={2,number,######0} width={3} height={4} xoffset=0 yoffset={5} xadvance={6} page={7} chnl=0 ",_char, _x, _y, _px.getWidth(), _px.getHeight(), _gl.getLeft(), _gl.getTop(), _page));
+
+            _count++;
+
+            _x+=_px.getWidth()+2;
+            if(_x+_size > _xyres)
+            {
+                //_y+=_px.getHeight()+2;
+                _y+=_size+2;
+                _x=0;
+            }
+
+            if(_y+(_size*2) > _xyres)
+            {
+                ImageIO.write(_im,"png", new File(_outdir,_prefix+"."+_page+".png"));
+                _page++;
+                _im=null;
+            }
+        }
+
+        _pw.flush();
+        _pw.close();
+
+        _pw = new PrintWriter(new FileWriter(new File(_outdir,_prefix+".fnt")));
+        _pw.println("info face=\"Sans\" size=16 bold=0 italic=0 charset=\"latin1\" unicode=0 stretchH=100 smooth=1 aa=1 padding=1,1,1,1 spacing=0,0");
+        _pw.println("common lineHeight="+_size+" base="+_size+" scaleW="+_xyres+" scaleH="+_xyres+" pages="+(_page+1)+" packed=0");
+        for(int _i=0; _i<_page+1; _i++)
+        {
+            _pw.println("page id="+_i+" file=\""+_prefix+"."+_i+".png\"");
+        }
+        _pw.println("chars count="+_count);
+        _pw.println(_sw.getBuffer().toString());
+        _pw.close();
+
+        ImageIO.write(_im,"png", new File(_outdir,_prefix+"."+_page+".png"));
     }
 
-    @SneakyThrows
-    public static void makeFont(File _ttf, int _size, int _xyres, File _outdir, String _prefix, int[][] _codesets) {
-        IndexColorModel _icm = null;
-        //byte[] _bw = {0, (byte) 255};
-        // _icm = new IndexColorModel(1, _bw.length,_bw,_bw,_bw,_bw);
+    static FreeType.Library library = FreeType.initFreeType();;
+    static FreeType.Face face;
 
-        //byte[] _bw = {0, (byte) 48, (byte) 96,  (byte) (96+48), (byte) 192, (byte) (192+32),  (byte) (192+64), (byte) 255};
-        // _icm = new IndexColorModel(4, _bw.length,_bw,_bw,_bw,_bw);
+    public static FreeType.Glyph getGlyph(char c) {
+        boolean missing = face.getCharIndex(c) == 0 && c != 0;
+        if (missing) return null;
 
+        face.loadChar(c, FreeType.FT_LOAD_DEFAULT | FreeType.FT_LOAD_FORCE_AUTOHINT);
 
-        //byte[] _bw = {0, (byte) 96, (byte) 192, (byte) 255};
-        //_icm = new IndexColorModel(2, _bw.length,_bw,_bw,_bw,_bw);
+        FreeType.GlyphSlot slot = face.getGlyph();
+        return slot.getGlyph();
+    }
 
-        /**/
-        int _n = 32;
-        byte[] _bw = new byte[_n];
-        for (int _i = 0; _i < _n; _i++) _bw[_i] = (byte) (255f * ((float) _i / (float) _n));
-         _icm = new IndexColorModel(8, _bw.length, _bw, _bw, _bw, _bw);
-        /**/
+    public static Pixmap getPixmap(FreeType.Glyph mainGlyph) {
+        mainGlyph.toBitmap(FreeType.FT_RENDER_MODE_NORMAL);
 
-        //MakeFontGdxFt.makeFont(_ttf, _size,_xyres,_outdir,_prefix,_codesets, _icm, 1.5f);
-        MakeFontAwtDf.makeFont(_ttf,128, 4096, _outdir, _prefix, _codesets);
+        FreeType.Bitmap mainBitmap = mainGlyph.getBitmap();
+        return mainBitmap.getPixmap(Pixmap.Format.RGBA8888, Color.WHITE, 1f);
     }
 }
 

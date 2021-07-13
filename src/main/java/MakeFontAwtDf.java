@@ -14,99 +14,136 @@
  * limitations under the License.
  */
 
-import com.badlogic.gdx.backends.headless.HeadlessFiles;
-import com.badlogic.gdx.backends.headless.HeadlessNativesLoader;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeType;
+import com.badlogic.gdx.tools.distancefield.DistanceFieldGenerator;
 import lombok.SneakyThrows;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.font.LineMetrics;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.text.MessageFormat;
 
-public class MakeFont
-{
-    public static int[][] _chars = {
-            { 0x0020 , 0x007e ,0}, // Basic Latin, ASCII
-            { 0x00a1 , 0x00ff ,0}, // Latin-1 Supplement
-            { 0x0100 , 0x024f ,0}, // Latin Extended-A, Latin Extended-B
-            { 0x02C6 , 0x02C7 ,0}, // Circumflex, Caron
-            { 0x02D8 , 0x02DD ,0}, // Breve, Dot Above, Ring Above, Ogonek, Small Tilde, Double Acute Accent
-            { 0x0370 , 0x03ff ,0}, // Greek, Coptic
-            { 0x0400 , 0x04ff ,0}, // cyrillic
-            //{ 0x0500 , 0x052f ,0}, // cyrillic supplement
-            //{ 0x1e00 , 0x1eff ,1}, // Latin Extended Additional
-            { 0x2010 , 0x205f ,0}, // General Punctuation
-            { 0x20a0 , 0x20bf ,0}, // Currency Symbols -- Pound Sign, Euro Sign, BitCoin Sign
-            { 0x2122 , 0x2122 ,0}, // (TM)
-            { 0x2212 , 0x2212 ,0}, // minus
-            /*
-            { 0x2190 , 0x21FF ,0}, // Arrows
-            { 0x2E80 , 0x2EFF ,0}, // CJK Radicals Supplement	128	115	Han
-            { 0x2F00 , 0x2FDF ,0}, // Kangxi Radicals	224	214	Han
-            { 0x2FF0 , 0x2FFF ,0}, // Ideographic Description Characters	16	12	Common
-            { 0x3000 , 0x303F ,0}, // CJK Symbols and Punctuation	64	64	Han (15 characters), Hangul (2 characters), Common (43 characters), Inherited (4 characters)
-            { 0x3040 , 0x309F ,0}, // Hiragana	96	93	Hiragana (89 characters), Common (2 characters), Inherited (2 characters)
-            { 0x30A0 , 0x30FF ,0}, // Katakana	96	96	Katakana (93 characters), Common (3 characters)
-            { 0x3100 , 0x312F ,0}, // Bopomofo	48	43	Bopomofo
-            { 0x3130 , 0x318F ,0}, // Hangul Compatibility Jamo	96	94	Hangul
-            { 0x3190 , 0x319F ,0}, // Kanbun	16	16	Common
-            { 0x31A0 , 0x31BF ,0}, // Bopomofo Extended	32	32	Bopomofo
-            { 0x31C0 , 0x31EF ,0}, // CJK Strokes	48	36	Common
-            { 0x31F0 , 0x31FF ,0}, // Katakana Phonetic Extensions	16	16	Katakana
-            { 0x3200 , 0x32FF ,0}, // Enclosed CJK Letters and Months	256	255	Hangul (62 characters), Katakana (47 characters), Common (146 characters)
-            { 0x3300 , 0x33FF ,0}, // CJK Compatibility	256	256	Katakana (88 characters), Common (168 characters)
-            { 0x3400 , 0x4DBF ,0}, // CJK Unified Ideographs Extension A	6,592	6,592	Han
-            { 0x4DC0 , 0x4DFF ,0}, // Yijing Hexagram Symbols	64	64	Common
-            { 0x4E00 , 0x9FFF ,0}, // CJK Unified Ideographs	20,992	20,989	Han
-            { 0xF900 , 0xFAFF ,0}, // CJK Compatibility Ideographs	512	472	Han
-            */
+public class MakeFontAwtDf {
 
-            { 0xfffd , 0xfffe ,0},
-            //{ 0x1f00 , 0xfff0 ,0},
-    };
 
-    @SneakyThrows
-    public static void main(String[] args) throws IOException, FontFormatException {
-
-        File _ttf = new File("/data/fredo/_fontz/_pub/Lato/Lato-Regular.ttf");
-        makeFont(_ttf,16,512,new File("."),"lato-16", _chars);
-
-    }
-    @SneakyThrows
-    public static void main_(String[] args)
+    public static void makeFont(File _ttf, int _size, int _xyres, File _outdir, String _prefix, int[][] _codesets) throws IOException, FontFormatException
     {
-        File _ttf = new File("/data/fredo/_fontz/_pub/Noto-Sans/Noto_Sans_JP/NotoSansJP-Regular.otf");
-        makeFont(_ttf,32,4096,new File("."),"noto-sans-jp-32", _chars);
+        Font _fnt = Font.createFont(Font.TRUETYPE_FONT, _ttf).deriveFont((float)_size);
+        BufferedImage _im = null;
+        Graphics2D _g = null;
+
+        StringWriter _sw = new StringWriter();
+        PrintWriter _pw = new PrintWriter(_sw);
+
+        int _page = 0;
+        int _count = 0;
+        int _y = 0;
+        int _x = 0;
+        int _mh = 0;
+        boolean _stop =  false;
+        for(int[] _charr : _codesets)
+            for(int _char=_charr[0]; _char<(_charr[1]+1); _char++)
+            {
+                if(_im==null)
+                {
+                    _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_BINARY);
+                    _g = (Graphics2D) _im.getGraphics();
+
+                    _g.setRenderingHint(
+                            RenderingHints.KEY_ALPHA_INTERPOLATION,
+                            RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
+
+                    _g.setRenderingHint(
+                            RenderingHints.KEY_TEXT_ANTIALIASING,
+                            RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                    _g.setRenderingHint(
+                            RenderingHints.KEY_DITHERING,
+                            RenderingHints.VALUE_DITHER_DISABLE);
+
+                    _g.setComposite(AlphaComposite.Clear);
+                    _g.setColor(Color.RED);
+                    _g.fillRect(0, 0, _xyres, _xyres);
+
+                    _g.setComposite(AlphaComposite.Src);
+                    _g.setColor(Color.WHITE);
+                    _g.setFont(_fnt);
+                    _y = 0;
+                    _x = 0;
+                }
+
+                if(!_fnt.canDisplay(_char))
+                {
+                    _pw.println(MessageFormat.format("char id={0,number,######0} x={1,number,######0} y={2,number,######0} width=0 height=0 xoffset=0 yoffset=0 xadvance={3} page=0 chnl=0 ",_char, _x>>2, _y>>2, _size>>2));
+                    _count++;
+                    continue;
+                }
+
+                if((_charr[2]==1) && !Character.isAlphabetic(_char))
+                {
+                    continue;
+                }
+
+                FontMetrics _fm = new Canvas().getFontMetrics(_fnt);
+
+                String _s = Character.toString((char) _char);
+                LineMetrics _lm = _fm.getLineMetrics(_s, _g);
+                int _w = (int)_fm.charWidth(_char);
+                int _h = (int)_lm.getHeight();
+                int _d = (int)_lm.getDescent();
+
+                if(_mh<_h) _mh=_h;
+
+                _g.drawString(_s, _x, _h+(_y)-_d);
+
+                _pw.println(MessageFormat.format("char id={0,number,######0} x={1,number,######0} y={2,number,######0} width={3} height={4} xoffset=0 yoffset={5} xadvance={6} page={7} chnl=0 ",_char, _x>>2, _y>>2, _w>>2, _h>>2, _d>>2, _w>>2, _page));
+
+                _count++;
+
+                _x+=_w+4;
+                if(_x+_size > _xyres)
+                {
+                    _y+=_mh+4;
+                    _x=0;
+                }
+
+                if(_y+(_size*2) > _xyres)
+                {
+                    outputImages(_size,_outdir,_prefix, _page, _im);
+                    _page++;
+                    _g.dispose();
+                    _im=null;
+                }
+            }
+        _pw.flush();
+        _pw.close();
+
+        _pw = new PrintWriter(new FileWriter(new File(_outdir,_prefix+".fnt")));
+        _pw.println("info face=\"Sans\" size="+(_mh>>2)+" bold=0 italic=0 charset=\"latin1\" unicode=0 stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=0,0");
+        _pw.println("common lineHeight="+(_mh>>2)+" base="+(_mh>>2)+" scaleW="+(_xyres>>2)+" scaleH="+(_xyres>>2)+" pages="+(_page+1)+" packed=0");
+        for(int _i=0; _i<_page+1; _i++)
+        {
+            _pw.println("page id="+_i+" file=\""+_prefix+"."+_i+".png\"");
+        }
+        _pw.println("chars count="+_count);
+        _pw.println(_sw.getBuffer().toString());
+        _pw.close();
+
+        outputImages(_size,_outdir,_prefix, _page, _im);
     }
 
     @SneakyThrows
-    public static void makeFont(File _ttf, int _size, int _xyres, File _outdir, String _prefix, int[][] _codesets) {
-        IndexColorModel _icm = null;
-        //byte[] _bw = {0, (byte) 255};
-        // _icm = new IndexColorModel(1, _bw.length,_bw,_bw,_bw,_bw);
-
-        //byte[] _bw = {0, (byte) 48, (byte) 96,  (byte) (96+48), (byte) 192, (byte) (192+32),  (byte) (192+64), (byte) 255};
-        // _icm = new IndexColorModel(4, _bw.length,_bw,_bw,_bw,_bw);
-
-
-        //byte[] _bw = {0, (byte) 96, (byte) 192, (byte) 255};
-        //_icm = new IndexColorModel(2, _bw.length,_bw,_bw,_bw,_bw);
-
-        /**/
-        int _n = 32;
-        byte[] _bw = new byte[_n];
-        for (int _i = 0; _i < _n; _i++) _bw[_i] = (byte) (255f * ((float) _i / (float) _n));
-         _icm = new IndexColorModel(8, _bw.length, _bw, _bw, _bw, _bw);
-        /**/
-
-        //MakeFontGdxFt.makeFont(_ttf, _size,_xyres,_outdir,_prefix,_codesets, _icm, 1.5f);
-        MakeFontAwtDf.makeFont(_ttf,128, 4096, _outdir, _prefix, _codesets);
+    public static void outputImages(int _size, File _outdir, String _prefix, int _page, BufferedImage _im)
+    {
+        ImageIO.write(_im,"png", new File(_outdir,_prefix+"."+_page+".png"));
+        DistanceFieldGenerator generator = new DistanceFieldGenerator();
+        generator.setColor(Color.WHITE);
+        generator.setDownscale(_size/32);
+        generator.setSpread(_size/16f);
+        BufferedImage _df = generator.generateDistanceField(_im);
+        ImageIO.write(_df,"png", new File(_outdir,_prefix+"-df."+_page+".png"));
     }
 }
 

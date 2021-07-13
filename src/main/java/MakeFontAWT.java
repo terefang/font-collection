@@ -24,52 +24,8 @@ import java.text.MessageFormat;
 
 public class MakeFontAWT {
 
-    static int[][] _chars = {
-            { 0x0020 , 0x007e ,0}, // Basic Latin, ASCII
-            { 0x00a1 , 0x00ff ,0}, // Latin-1 Supplement
-            { 0x02C6 , 0x02C7 ,0}, // Circumflex, Caron
-            { 0x02D8 , 0x02DD ,0}, // Breve, Dot Above, Ring Above, Ogonek, Small Tilde, Double Acute Accent
-            { 0x2010 , 0x205f ,0}, // General Punctuation
-            { 0x20a4 , 0x20a4 ,0}, // Pound Sign
-            { 0x20ac , 0x20ac ,0}, // Euro Sign
-            { 0x20bf , 0x20bf ,0}, // BitCoin Sign
-            { 0x2122 , 0x2122 ,0}, // (TM)
-            { 0x2212 , 0x2212 ,0}, // minus
-            { 0xfffd , 0xfffe ,0},
-//            { 0x0100 , 0x024f ,0}, // Latin Extended-A, Latin Extended-B
-//            { 0x0370 , 0x03ff ,0}, // Greek, Coptic
-//            { 0x0400 , 0x04ff ,0}, // cyrillic
-//            { 0x0500 , 0x052f ,0}, // cyrillic supplement
-//            { 0x1e00 , 0x1eff ,1}, // Latin Extended Additional
-            { 0x2E80 , 0x2EFF ,0}, // CJK Radicals Supplement	128	115	Han
-            { 0x2F00 , 0x2FDF ,0}, // Kangxi Radicals	224	214	Han
-            { 0x2FF0 , 0x2FFF ,0}, // Ideographic Description Characters	16	12	Common
-            { 0x3000 , 0x303F ,0}, // CJK Symbols and Punctuation	64	64	Han (15 characters), Hangul (2 characters), Common (43 characters), Inherited (4 characters)
-            { 0x3040 , 0x309F ,0}, // Hiragana	96	93	Hiragana (89 characters), Common (2 characters), Inherited (2 characters)
-            { 0x30A0 , 0x30FF ,0}, // Katakana	96	96	Katakana (93 characters), Common (3 characters)
-            { 0x3100 , 0x312F ,0}, // Bopomofo	48	43	Bopomofo
-            { 0x3130 , 0x318F ,0}, // Hangul Compatibility Jamo	96	94	Hangul
-            { 0x3190 , 0x319F ,0}, // Kanbun	16	16	Common
-            { 0x31A0 , 0x31BF ,0}, // Bopomofo Extended	32	32	Bopomofo
-            { 0x31C0 , 0x31EF ,0}, // CJK Strokes	48	36	Common
-            { 0x31F0 , 0x31FF ,0}, // Katakana Phonetic Extensions	16	16	Katakana
-            { 0x3200 , 0x32FF ,0}, // Enclosed CJK Letters and Months	256	255	Hangul (62 characters), Katakana (47 characters), Common (146 characters)
-            { 0x3300 , 0x33FF ,0}, // CJK Compatibility	256	256	Katakana (88 characters), Common (168 characters)
-            { 0x3400 , 0x4DBF ,0}, // CJK Unified Ideographs Extension A	6,592	6,592	Han
-            { 0x4DC0 , 0x4DFF ,0}, // Yijing Hexagram Symbols	64	64	Common
-            { 0x4E00 , 0x9FFF ,0}, // CJK Unified Ideographs	20,992	20,989	Han
-            { 0xF900 , 0xFAFF ,0}, // CJK Compatibility Ideographs	512	472	Han
-            //{ 0x1f00 , 0xfff0 ,0},
-    };
 
-    public static void main(String[] args) throws IOException, FontFormatException {
-
-        File _ttf = new File("/data/fredo/_fontz/_pub/Noto-Sans/Noto_Sans_JP/NotoSansJP-Regular.otf");
-        makeFont(_ttf,50,4096,new File("."),"noto-sans-jp-32", _chars);
-
-    }
-
-    public static void makeFont(File _ttf, int _size, int _xyres, File _outdir, String _prefix, int[][] _codesets) throws IOException, FontFormatException
+    public static void makeFont(File _ttf, int _size, int _xyres, File _outdir, String _prefix, int[][] _codesets, IndexColorModel _icm, float _gamma) throws IOException, FontFormatException
     {
         Font _fnt = Font.createFont(Font.TRUETYPE_FONT, _ttf).deriveFont((float)_size);
         BufferedImage _im = null;
@@ -78,19 +34,6 @@ public class MakeFontAWT {
         StringWriter _sw = new StringWriter();
         PrintWriter _pw = new PrintWriter(_sw);
 
-        //byte[] _bw = {0, (byte) 255};
-        //IndexColorModel _icm = new IndexColorModel(1, _bw.length,_bw,_bw,_bw,_bw);
-
-        //byte[] _bw = {0, (byte) 48, (byte) 96,  (byte) (96+48), (byte) 192, (byte) (192+32),  (byte) (192+64), (byte) 255};
-        //IndexColorModel _icm = new IndexColorModel(4, _bw.length,_bw,_bw,_bw,_bw);
-
-        byte[] _bw = {0, (byte) 96, (byte) 192, (byte) 255};
-        IndexColorModel _icm = new IndexColorModel(2, _bw.length,_bw,_bw,_bw,_bw);
-
-        //int _n = 42;
-        //byte[] _bw = new byte[_n];
-        //for(int _i=0;_i<_n; _i++) _bw[_i] = (byte)(255f*((float)_i/(float)_n));
-        //IndexColorModel _icm = new IndexColorModel(8, _bw.length,_bw,_bw,_bw,_bw);
         int _page = 0;
         int _count = 0;
         int _y = 0;
@@ -101,9 +44,21 @@ public class MakeFontAWT {
             {
                 if(_im==null)
                 {
-                    _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_INDEXED,_icm);
-                    //_im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_INT_ARGB);
+                    if(_icm == null)
+                    {
+                        _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_INT_ARGB);
+                    }
+                    else
+                    {
+                        _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_INDEXED,_icm);
+                    }
                     _g = (Graphics2D) _im.getGraphics();
+
+                    if(_gamma>1f)
+                    {
+                        _g.setRenderingHint(RenderingHints.KEY_TEXT_LCD_CONTRAST, (int)(_gamma*100));
+                    }
+
                     _g.setRenderingHint(
                             RenderingHints.KEY_ALPHA_INTERPOLATION,
                             RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
@@ -153,7 +108,7 @@ public class MakeFontAWT {
 
                 _count++;
 
-                _x+=_w+2;
+                _x+=_w+1;
                 if(_x+_size > _xyres)
                 {
                     _y+=_h+2;

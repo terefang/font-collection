@@ -1,6 +1,6 @@
 info face="Sans" size=16 bold=0 italic=0 charset="latin1" unicode=0 stretchH=100 smooth=1 aa=1 padding=1,1,1,1 spacing=0,0
 common lineHeight=16 base=16 scaleW=512 scaleH=512 pages=1 packed=0
-page id=0 file="sans-16.png"
+page id=0 file="lato-lat-cyr-gr-16.png"
 chars count=1325
 char id=32 x=0 y=0 width=4 height=17 xoffset=0 yoffset=3 xadvance=5 page=0 chnl=0 
 char id=33 x=6 y=0 width=4 height=17 xoffset=0 yoffset=3 xadvance=5 page=0 chnl=0 

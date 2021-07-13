@@ -52,16 +52,21 @@ public class GdfBitmapFont extends BitmapFont
 	{
 		return create((FileHandle)null, "6x11");
 	}
-	
+
 	public static final BitmapFont create(int[][] table, int start, int cwidth)
+	{
+		return create(table,start, cwidth,null, null);
+	}
+
+	public static final BitmapFont create(int[][] table, int start, int cwidth, int[] wAdvance, int[] cMap)
 	{
 		BitmapFontData data = new BitmapFontData();
 		
-		Gdx2DPixmap pixmap = createFromInternal(data, table, start, table.length, table[0].length, cwidth, nextPowerOf2(cwidth), nextPowerOf2(table[0].length));
+		Gdx2DPixmap pixmap = createFromInternal(data, table, start, table.length, table[0].length, cwidth, nextPowerOf2(cwidth), nextPowerOf2(table[0].length), wAdvance, cMap);
 
-		Texture texture = new Texture((TextureData) (new PixmapTextureData(new Pixmap(pixmap), (Pixmap.Format) null, false, true)));
+		Texture texture = new Texture((TextureData) (new PixmapTextureData(new Pixmap(pixmap), Pixmap.Format.fromGdx2DPixmapFormat(pixmap.getFormat()), false, false)));
+
 		TextureRegion region = new TextureRegion(texture);
-		
 		return new GdfBitmapFont(data, region);
 	}
 
@@ -94,15 +99,15 @@ public class GdfBitmapFont extends BitmapFont
 
 		if("8x8".equalsIgnoreCase(fileName))
 		{
-			pixmap = createFromInternal(data, Ascii_8x8.table, Ascii_8x8.start, Ascii_8x8.table.length, Ascii_8x8.table[0].length, Ascii_8x8.width, Ascii_8x8.wstep, Ascii_8x8.hstep);
+			pixmap = createFromInternal(data, Ascii_8x8.table, Ascii_8x8.start, Ascii_8x8.table.length, Ascii_8x8.table[0].length, Ascii_8x8.width, Ascii_8x8.wstep, Ascii_8x8.hstep, Ascii_8x8.wAdvance, Ascii_8x8.cMap);
 		}
 		else if("6x11".equalsIgnoreCase(fileName))
 		{
-			pixmap = createFromInternal(data, Ascii_6x11.table, Ascii_6x11.start, Ascii_6x11.table.length, Ascii_6x11.table[0].length, Ascii_6x11.width, Ascii_6x11.wstep, Ascii_6x11.hstep);
+			pixmap = createFromInternal(data, Ascii_6x11.table, Ascii_6x11.start, Ascii_6x11.table.length, Ascii_6x11.table[0].length, Ascii_6x11.width, Ascii_6x11.wstep, Ascii_6x11.hstep, Ascii_6x11.wAdvance, Ascii_6x11.cMap);
 		}
 		else if(fileName == null || ins == null)
 		{
-			pixmap = createFromInternal(data, Ascii_6x11.table, Ascii_6x11.start, Ascii_6x11.table.length, Ascii_6x11.table[0].length, Ascii_6x11.width, Ascii_6x11.wstep, Ascii_6x11.hstep);
+			pixmap = createFromInternal(data, Ascii_6x11.table, Ascii_6x11.start, Ascii_6x11.table.length, Ascii_6x11.table[0].length, Ascii_6x11.width, Ascii_6x11.wstep, Ascii_6x11.hstep, Ascii_6x11.wAdvance, Ascii_6x11.cMap);
 		}
 		else if(fileName.endsWith(".gdfa"))
 		{
@@ -136,7 +141,7 @@ public class GdfBitmapFont extends BitmapFont
 			throw new IllegalArgumentException("Unknown Font Format = " + fileName);
 		}
 
-		Texture texture = new Texture((TextureData) (new PixmapTextureData(new Pixmap(pixmap), (Pixmap.Format) null, false, true)));
+		Texture texture = new Texture((TextureData) (new PixmapTextureData(new Pixmap(pixmap), Pixmap.Format.fromGdx2DPixmapFormat(pixmap.getFormat()), false, false)));
 		TextureRegion region = new TextureRegion(texture);
 		GdfBitmapFont _gdf = new GdfBitmapFont(data, region);
 		_gdf.setUseIntegerPositions(true);
@@ -151,12 +156,21 @@ public class GdfBitmapFont extends BitmapFont
 	
 	public static final Gdx2DPixmap createPixmap(int w, int h)
 	{
-		Gdx2DPixmap p = new Gdx2DPixmap(w, h, Gdx2DPixmap.GDX2D_FORMAT_LUMINANCE_ALPHA);
+		Gdx2DPixmap p = new Gdx2DPixmap(w, h, Gdx2DPixmap.GDX2D_FORMAT_RGBA4444);
 		p.clear(0);
 		return p;
 	}
 	
-	public static final void setBmData(BitmapFontData data, int startChar, int numChars, int charH, int charW, int charHstep, int charWstep, int charsPerRow, int[] charWadvance)
+	public static final void setBmData(BitmapFontData data,
+									   int startChar,
+									   int numChars,
+									   int charH,
+									   int charW,
+									   int charHstep,
+									   int charWstep,
+									   int charsPerRow,
+									   int[] charWadvance,
+									   int[] cMap)
 	{
 		data.padTop = 0;
 		data.padRight = 0;
@@ -179,7 +193,7 @@ public class GdfBitmapFont extends BitmapFont
 		for(int c = startChar; c < (numChars + startChar); c++)
 		{
 			glyph = new Glyph();
-			glyph.id = c;
+			glyph.id = (cMap==null) ? c : cMap[c-startChar];
 			if(charWadvance != null)
 			{
 				glyph.xadvance = charWadvance[ci];
@@ -212,16 +226,18 @@ public class GdfBitmapFont extends BitmapFont
 													   int charH,
 													   int charW,
 													   int charWstep,
-													   int charHstep)
+													   int charHstep,
+													   int[] wAdvance,
+													   int[] cMap)
 	{
 		
 		Gdx2DPixmap pixmap = createPixmap(256, 256);
 		
-		setBmData(data, startChar, numChars, charH, charW, charHstep, charWstep, 16, null);
+		setBmData(data, startChar, numChars, charH, charW, charHstep, charWstep, 16, wAdvance, cMap);
 		
 		for(int c = startChar; c < (startChar + numChars); c++)
 		{
-			Glyph glyph = data.getGlyph((char) c);
+			Glyph glyph = (cMap==null) ? data.getGlyph((char) c) : data.getGlyph((char) cMap[c-startChar]);
 			int srcX = glyph.srcX;
 			int srcY = glyph.srcY;
 			for(int y = 0; y < charH; y++)
@@ -275,7 +291,7 @@ public class GdfBitmapFont extends BitmapFont
 			charW = (int) st.nval;
 			st.nextToken();
 			charH = (int) st.nval;
-			
+
 			int charWstep = nextPowerOf2(charW);
 			int charHstep = nextPowerOf2(charH);
 			
@@ -285,15 +301,48 @@ public class GdfBitmapFont extends BitmapFont
 			texRes /= 2;
 			texRes = 1 << texRes;
 			int charPerRow = texRes / charWstep;
-			
+			int[] wAdvance = null;
+			int[] cMap = null;
+
 			pixmap = createPixmap(texRes, texRes);
+
+			/* -- proportional advancees -- */
+			st.nextToken();
+			if("advances".equalsIgnoreCase(st.sval))
+			{
+				wAdvance = new int[numChars];
+				for(int _i=0; _i<numChars; _i++)
+				{
+					st.nextToken();
+					wAdvance[_i] = (int) st.nval;
+				}
+			}
+			else
+			{
+				st.pushBack();
+			}
+
+			/* -- discontinous character map -- */
+			st.nextToken();
+			if("cmap".equalsIgnoreCase(st.sval))
+			{
+				cMap = new int[numChars];
+				for(int _i=0; _i<numChars; _i++)
+				{
+					st.nextToken();
+					cMap[_i] = (int) st.nval;
+				}
+			}
+			else
+			{
+				st.pushBack();
+			}
+
+			setBmData(data, startChar, numChars, charH, charW, charHstep, charWstep, charPerRow, wAdvance, cMap);
 			
-			setBmData(data, startChar, numChars, charH, charW, charHstep, charWstep, charPerRow, null);
-			
-			int ci = 0;
 			for(int c = startChar; c < (startChar + numChars); c++)
 			{
-				Glyph glyph = data.getGlyph((char) c);
+				Glyph glyph = (cMap==null) ? data.getGlyph((char) c) : data.getGlyph((char) cMap[c-startChar]);
 				int srcX = glyph.srcX;
 				int srcY = glyph.srcY;
 				for(int y = 0; y < charH; y++)
@@ -301,10 +350,17 @@ public class GdfBitmapFont extends BitmapFont
 					for(int x = 0; x < charW; x++)
 					{
 						st.nextToken();
-						pixmap.setPixel(srcX + x, srcY + y, (st.nval == 0 ? 0 : 0xFFFFffff));
+						switch((int)st.nval)
+						{
+							case 0: pixmap.setPixel(srcX + x, srcY + y, 0);
+								break;
+							case 1: pixmap.setPixel(srcX + x, srcY + y, 0xFFFFffff);
+								break;
+							default: pixmap.setPixel(srcX + x, srcY + y, ((int)st.nval & 0xff) | 0xFFFFff00);
+								break;
+						}
 					}
 				}
-				ci++;
 			}
 			ins.close();
 		}
@@ -348,10 +404,10 @@ public class GdfBitmapFont extends BitmapFont
 		int startChar = edis.readInt();
 		int charW = edis.readInt();
 		int charH = edis.readInt();
-		
+
 		int charWstep = nextPowerOf2(charW);
 		int charHstep = nextPowerOf2(charH);
-		
+
 		int numpChars = nextPowerOf2(numChars);
 		int totalArea = nextPowerOf2(charHstep * charWstep * numpChars);
 		int texRes = Integer.numberOfTrailingZeros(totalArea) + 1;
@@ -369,14 +425,13 @@ public class GdfBitmapFont extends BitmapFont
 			{
 				charAdvance[ci] = (edis.readByte() & 0xff);
 			}
-			setBmData(data, startChar, numChars, charH, charW, charHstep, charWstep, charPerRow, charAdvance);
+			setBmData(data, startChar, numChars, charH, charW, charHstep, charWstep, charPerRow, charAdvance, null);
 		}
 		else
 		{
-			setBmData(data, startChar, numChars, charH, charW, charHstep, charWstep, charPerRow, null);
+			setBmData(data, startChar, numChars, charH, charW, charHstep, charWstep, charPerRow, null, null);
 		}
 		
-		int ci = 0;
 		for(int c = startChar; c < (startChar + numChars); c++)
 		{
 			Glyph glyph = data.getGlyph((char) c);
@@ -400,8 +455,7 @@ public class GdfBitmapFont extends BitmapFont
 						}
 						else
 						{
-							p |= (p << 8);
-							p |= (p << 16);
+							p |= 0xFFFFff00L;
 						}
 						pixmap.setPixel(srcX + x, srcY + y, (int) (p & 0xFFFFffff));
 					}
@@ -418,13 +472,12 @@ public class GdfBitmapFont extends BitmapFont
 					}
 				}
 			}
-			ci++;
 		}
 		edis.close();
 		return pixmap;
 	}
 	
-	public static final void dumpGDFB(InputStream ins) throws IOException
+	public static final void dumpGDFB(InputStream ins, boolean extendedFormat) throws IOException
 	{
 		EndianDataInputStream edis = new EndianDataInputStream(ins);
 		edis.order(ByteOrder.BIG_ENDIAN);
@@ -446,7 +499,16 @@ public class GdfBitmapFont extends BitmapFont
 		System.out.println("// numChar=" + numChars);
 		System.out.println("// charW=" + charW);
 		System.out.println("// charH=" + charH);
-		
+
+		if(extendedFormat)
+		{
+			int[] charAdvance = new int[numChars];
+			for(int ci = 0; ci < numChars; ci++)
+			{
+				charAdvance[ci] = (edis.readByte() & 0xff);
+			}
+		}
+
 		int numpChars = nextPowerOf2(numChars);
 		int totalArea = nextPowerOf2(charHstep * charWstep * numpChars);
 		int texRes = Integer.numberOfTrailingZeros(totalArea) + 1;
@@ -473,10 +535,47 @@ public class GdfBitmapFont extends BitmapFont
 		}
 		edis.close();
 	}
-	
+
+	public GdfBitmapFont(BitmapFontData data, TextureRegion region, boolean _useInteger)
+	{
+		super(data, region, _useInteger);
+	}
+
 	public GdfBitmapFont(BitmapFontData data, TextureRegion region)
 	{
-		super(data, region, false);
+		super(data, region, true);
+	}
+
+	@SneakyThrows
+	public static BitmapFont createFromRaw(int _startChar, int _w, int _h, FileHandle _fh)
+	{
+		int _numChars = (int) (_fh.file().length() / _h);
+		int charWstep = nextPowerOf2(_w);
+		int charHstep = nextPowerOf2(_h);
+
+		BitmapFontData data = new BitmapFontData();
+
+		int[][] _table = new int[_numChars][_h];
+
+		InputStream _fin = _fh.read();
+		for(int _i=0; _i<_numChars; _i++)
+		{
+			for(int _j=0; _j<_h; _j++)
+			{
+				_table[_i][_j] = _fin.read();
+			}
+		}
+		_fin.close();
+
+		Gdx2DPixmap pixmap = createFromInternal(data, _table, _startChar, _numChars, _h, _w, charWstep, charHstep, null, null);
+
+		Texture texture = new Texture((TextureData) (new PixmapTextureData(new Pixmap(pixmap), Pixmap.Format.fromGdx2DPixmapFormat(pixmap.getFormat()), false, false)));
+		TextureRegion region = new TextureRegion(texture);
+		GdfBitmapFont _gdf = new GdfBitmapFont(data, region);
+		_gdf.setUseIntegerPositions(true);
+		_gdf.setOwnsTexture(true);
+		return _gdf;
+
 	}
 
 	public static class EndianDataInputStream extends InputStream implements DataInput
@@ -617,11 +716,19 @@ public class GdfBitmapFont extends BitmapFont
 
 	public static class AVGA2_8x16
 	{
+		/*
+		 * file './font-bin/GdfBitmapFont.AVGA2_8x16.bin', filesize 3584bytes, linewidth=14bytes
+		 * array created from bin-file by bin2header
+		 * bin2header (c) 2013 Nils Stec, <nils.stec@gmail.com>
+		 *
+		 */
 		public static int start = 0;
 		public static int height = 16;
 		public static int width = 8;
 		public static int hstep = 16;
 		public static int wstep = 8;
+		public static int[] wAdvance = null;
+		public static int[] cMap = null;
 
 		public static int table[][] = {
 				 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } ,
@@ -885,17 +992,19 @@ public class GdfBitmapFont extends BitmapFont
 
 	public static class AVGA2_8x14
 	{
-		public static int start = 0;
-		public static int height = 14;
-		public static int width = 8;
-		public static int hstep = 16;
-		public static int wstep = 8;
 		/*
 		 * file './font-bin/GdfBitmapFont.AVGA2_8x14.bin', filesize 3584bytes, linewidth=14bytes
 		 * array created from bin-file by bin2header
 		 * bin2header (c) 2013 Nils Stec, <nils.stec@gmail.com>
 		 *
 		 */
+		public static int start = 0;
+		public static int height = 14;
+		public static int width = 8;
+		public static int hstep = 16;
+		public static int wstep = 8;
+		public static int[] wAdvance = null;
+		public static int[] cMap = null;
 		public static int table[][] = {
 				 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } ,
 				 { 0x00, 0x00, 0x7e, 0x81, 0xa5, 0x81, 0x81, 0xbd, 0x99, 0x81, 0x7e, 0x00, 0x00, 0x00 } ,
@@ -1158,11 +1267,19 @@ public class GdfBitmapFont extends BitmapFont
 
 	public static class Ascii_8x8
 	{
+		/*
+		 * file './font-bin/GdfBitmapFont.ASCII_8x8.bin'
+		 * array created from bin-file by bin2header
+		 * bin2header (c) 2013 Nils Stec, <nils.stec@gmail.com>
+		 *
+		 */
 		public static int start = 0;
 		public static int height = 8;
 		public static int width = 8;
 		public static int hstep = 8;
 		public static int wstep = 8;
+		public static int[] wAdvance = null;
+		public static int[] cMap = null;
 		public static int table[][] = {
 				{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},    /* Ascii 0 */
 				{0x3c, 0x42, 0xa5, 0x81, 0xbd, 0x42, 0x3c, 0x00},    /* Ascii 1 */
@@ -1298,11 +1415,19 @@ public class GdfBitmapFont extends BitmapFont
 
 	public static class Ascii_6x11
 	{
+		/*
+		 * file './font-bin/GdfBitmapFont.ASCII_6x11.bin'
+		 * array created from bin-file by bin2header
+		 * bin2header (c) 2013 Nils Stec, <nils.stec@gmail.com>
+		 *
+		 */
 		public static int start = 32;
 		public static int height = 11;
 		public static int width = 6;
 		public static int hstep = 16;
 		public static int wstep = 16;
+		public static int[] wAdvance = null;
+		public static int[] cMap = null;
 		public static int table[][] = {
 				{ 0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00,  0x00 },
 				{ 0x00,  0x00,  0x20,  0x20,  0x20,  0x20,  0x20,  0x00,  0x20,  0x00,  0x00 },
@@ -1529,7 +1654,5 @@ public class GdfBitmapFont extends BitmapFont
 				{ 0x00,  0x00,  0x80,  0x80,  0xF0,  0x88,  0x88,  0x88,  0xF0,  0x80,  0x80 },
 				{ 0x00,  0x00,  0x50,  0x00,  0x88,  0x88,  0x88,  0x88,  0x78,  0x08,  0x70 },
 		};
-
-
 	}
 }

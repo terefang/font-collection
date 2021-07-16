@@ -194,7 +194,7 @@ public class DynamicFreeTypeFonter
         _param.size = _psize;
         _param.characters=this.codes.toString();
         BitmapFont _font = new FreeTypeFontGenerator(this.freetypeFilehandle).generateFont(_param);
-        if(_size!=_psize)
+        if(!_moreExact && _size!=_psize)
         {
             _font.getData().setScale(((float)_size)/((float)_psize));
             _font.setUseIntegerPositions(true);

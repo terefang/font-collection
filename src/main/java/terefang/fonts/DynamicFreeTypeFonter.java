@@ -1,5 +1,6 @@
 package terefang.fonts;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
@@ -104,34 +105,37 @@ public class DynamicFreeTypeFonter
         256
     };
 
-    public static final int CODERANGE_ALWAYS = 0;
+    public static final int CODERANGE_DEFAULT = 0;
     public static final int CODERANGE_LATIN = 1;
     public static final int CODERANGE_GREEK = 2;
     public static final int CODERANGE_CYRILLIC = 3;
     public static final int CODERANGE_CJK = 4;
+    public static final int CODERANGE_ARROWS = 5;
+    public static final int CODERANGE_DINGBATS = 6;
 
     public static final int[][] standardCodeRanges = {
-            { 0x0020 , 0x007e , 0}, // Basic Latin, ASCII
-            { 0x00a1 , 0x00ff , 0}, // Latin-1 Supplement
-            { 0x0100 , 0x024f , 0}, // Latin Extended-A, Latin Extended-B
-            { 0x02C6 , 0x02C7 , 0}, // Circumflex, Caron
-            { 0x02D8 , 0x02DD , 0}, // Breve, Dot Above, Ring Above, Ogonek, Small Tilde, Double Acute Accent
-            { 0x0370 , 0x03ff , 2}, // Greek, Coptic
-            { 0x0400 , 0x04ff , 3}, // cyrillic
-            { 0x0500 , 0x052f , 3}, // cyrillic supplement
-            { 0x1e00 , 0x1eff , 1}, // Latin Extended Additional
-            { 0x2010 , 0x205f , 0}, // General Punctuation
-            { 0x20a0 , 0x20bf , 0}, // Currency Symbols -- Pound Sign, Euro Sign, BitCoin Sign
-            { 0x2122 , 0x2122 , 0}, // (TM)
+            { 0x0020 , 0x007e , CODERANGE_DEFAULT}, // Basic Latin, ASCII
+            { 0x00a1 , 0x00ff , CODERANGE_DEFAULT}, // Latin-1 Supplement
+            { 0x0100 , 0x01ff , CODERANGE_LATIN}, // Latin Extended-A
+            { 0x0200 , 0x024f , CODERANGE_LATIN}, // Latin Extended-B
+            { 0x02C6 , 0x02C7 , CODERANGE_DEFAULT}, // Circumflex, Caron
+            { 0x02D8 , 0x02DD , CODERANGE_DEFAULT}, // Breve, Dot Above, Ring Above, Ogonek, Small Tilde, Double Acute Accent
+            { 0x0370 , 0x03ff , CODERANGE_GREEK}, // Greek, Coptic
+            { 0x0400 , 0x04ff , CODERANGE_CYRILLIC}, // cyrillic
+            { 0x0500 , 0x052f , CODERANGE_CYRILLIC}, // cyrillic supplement
+            { 0x1e00 , 0x1eff , CODERANGE_LATIN}, // Latin Extended Additional
+            { 0x2010 , 0x205f , CODERANGE_DEFAULT}, // General Punctuation
+            { 0x20a0 , 0x20bf , CODERANGE_DEFAULT}, // Currency Symbols -- Pound Sign, Euro Sign, BitCoin Sign
+            { 0x2122 , 0x2122 , CODERANGE_DEFAULT}, // (TM)
             // 0 BMP	U+2000..U+206F	General Punctuation	112	111	Common (109 characters), Inherited (2 characters)
             // 0 BMP	U+2070..U+209F	Superscripts and Subscripts	48	42	Latin (15 characters), Common (27 characters)
             // 0 BMP	U+20A0..U+20CF	Currency Symbols	48	32	Common
             // 0 BMP	U+20D0..U+20FF	Combining Diacritical Marks for Symbols	48	33	Inherited
             // 0 BMP	U+2100..U+214F	Letterlike Symbols	80	80	Greek (1 character), Latin (4 characters), Common (75 characters)
             // 0 BMP	U+2150..U+218F	Number Forms	64	60	Latin (41 characters), Common (19 characters)
-            { 0x2190 , 0x21FF , 0}, // Arrows
+            { 0x2190 , 0x21FF , CODERANGE_ARROWS}, // Arrows
             // 0 BMP	U+2200..U+22FF	Mathematical Operators	256	256	Common
-            { 0x2212 , 0x2212 , 0}, // minus
+            { 0x2212 , 0x2212 , CODERANGE_DEFAULT}, // minus
             // 0 BMP	U+2300..U+23FF	Miscellaneous Technical	256	256	Common
             // 0 BMP	U+2400..U+243F	Control Pictures	64	39	Common
             // 0 BMP	U+2440..U+245F	Optical Character Recognition	32	11	Common
@@ -141,37 +145,40 @@ public class DynamicFreeTypeFonter
             // 0 BMP	U+25A0..U+25FF	Geometric Shapes	96	96	Common
             // 0 BMP	U+2600..U+26FF	Miscellaneous Symbols	256	256	Common
             // 0 BMP	U+2700..U+27BF	Dingbats	192	192	Common
-            { 0x2E80 , 0x2EFF , 4}, // CJK Radicals Supplement	128	115	Han
-            { 0x2F00 , 0x2FDF , 4}, // Kangxi Radicals	224	214	Han
-            { 0x2FF0 , 0x2FFF , 4}, // Ideographic Description Characters	16	12	Common
-            { 0x3000 , 0x303F , 4}, // CJK Symbols and Punctuation	64	64	Han (15 characters), Hangul (2 characters), Common (43 characters), Inherited (4 characters)
-            { 0x3040 , 0x309F , 4}, // Hiragana	96	93	Hiragana (89 characters), Common (2 characters), Inherited (2 characters)
-            { 0x30A0 , 0x30FF , 4}, // Katakana	96	96	Katakana (93 characters), Common (3 characters)
-            { 0x3100 , 0x312F , 4}, // Bopomofo	48	43	Bopomofo
-            { 0x3130 , 0x318F , 4}, // Hangul Compatibility Jamo	96	94	Hangul
-            { 0x3190 , 0x319F , 4}, // Kanbun	16	16	Common
-            { 0x31A0 , 0x31BF , 4}, // Bopomofo Extended	32	32	Bopomofo
-            { 0x31C0 , 0x31EF , 4}, // CJK Strokes	48	36	Common
-            { 0x31F0 , 0x31FF , 4}, // Katakana Phonetic Extensions	16	16	Katakana
-            { 0x3200 , 0x32FF , 4}, // Enclosed CJK Letters and Months	256	255	Hangul (62 characters), Katakana (47 characters), Common (146 characters)
-            { 0x3300 , 0x33FF , 4}, // CJK Compatibility	256	256	Katakana (88 characters), Common (168 characters)
-            { 0x3400 , 0x4DBF , 4}, // CJK Unified Ideographs Extension A	6,592	6,592	Han
-            { 0x4DC0 , 0x4DFF , 4}, // Yijing Hexagram Symbols	64	64	Common
-            { 0x4E00 , 0x9FFF , 4}, // CJK Unified Ideographs	20,992	20,989	Han
-            { 0xF900 , 0xFAFF , 4}, // CJK Compatibility Ideographs	512	472	Han
-            { 0xfffd , 0xfffe , 0}
+            { 0x2E80 , 0x2EFF , CODERANGE_CJK}, // CJK Radicals Supplement	128	115	Han
+            { 0x2F00 , 0x2FDF , CODERANGE_CJK}, // Kangxi Radicals	224	214	Han
+            { 0x2FF0 , 0x2FFF , CODERANGE_CJK}, // Ideographic Description Characters	16	12	Common
+            { 0x3000 , 0x303F , CODERANGE_CJK}, // CJK Symbols and Punctuation	64	64	Han (15 characters), Hangul (2 characters), Common (43 characters), Inherited (4 characters)
+            { 0x3040 , 0x309F , CODERANGE_CJK}, // Hiragana	96	93	Hiragana (89 characters), Common (2 characters), Inherited (2 characters)
+            { 0x30A0 , 0x30FF , CODERANGE_CJK}, // Katakana	96	96	Katakana (93 characters), Common (3 characters)
+            { 0x3100 , 0x312F , CODERANGE_CJK}, // Bopomofo	48	43	Bopomofo
+            { 0x3130 , 0x318F , CODERANGE_CJK}, // Hangul Compatibility Jamo	96	94	Hangul
+            { 0x3190 , 0x319F , CODERANGE_CJK}, // Kanbun	16	16	Common
+            { 0x31A0 , 0x31BF , CODERANGE_CJK}, // Bopomofo Extended	32	32	Bopomofo
+            { 0x31C0 , 0x31EF , CODERANGE_CJK}, // CJK Strokes	48	36	Common
+            { 0x31F0 , 0x31FF , CODERANGE_CJK}, // Katakana Phonetic Extensions	16	16	Katakana
+            { 0x3200 , 0x32FF , CODERANGE_CJK}, // Enclosed CJK Letters and Months	256	255	Hangul (62 characters), Katakana (47 characters), Common (146 characters)
+            { 0x3300 , 0x33FF , CODERANGE_CJK}, // CJK Compatibility	256	256	Katakana (88 characters), Common (168 characters)
+            { 0x3400 , 0x4DBF , CODERANGE_CJK}, // CJK Unified Ideographs Extension A	6,592	6,592	Han
+            { 0x4DC0 , 0x4DFF , CODERANGE_CJK}, // Yijing Hexagram Symbols	64	64	Common
+            { 0x4E00 , 0x9FFF , CODERANGE_CJK}, // CJK Unified Ideographs	20,992	20,989	Han
+            { 0xF900 , 0xFAFF , CODERANGE_CJK}, // CJK Compatibility Ideographs	512	472	Han
+            { 0xfffd , 0xfffe , CODERANGE_DEFAULT}
     };
 
 
 
     FileHandle freetypeFilehandle;
     StringBuilder codes;
+    int referenceHeight = 1080;
+    boolean scaleToReference = false;
+
     public DynamicFreeTypeFonter(FileHandle _fileHandle)
     {
         super();
         this.freetypeFilehandle = _fileHandle;
         this.codes = new StringBuilder();
-        this.addCodeRanges(CODERANGE_ALWAYS);
+        this.addCodeRanges(CODERANGE_DEFAULT);
     }
 
     Map<Integer, BitmapFont> sizedFonts = new HashMap<>();
@@ -182,6 +189,12 @@ public class DynamicFreeTypeFonter
     }
     public BitmapFont getFont(int _size, boolean _moreExact)
     {
+        if(this.scaleToReference && (Gdx.graphics.getHeight() != this.referenceHeight))
+        {
+
+            _size = ((_size*Gdx.graphics.getHeight()*100)/this.referenceHeight)/100;
+        }
+
         int _psize = normalizedSize(_size, _moreExact);
 
         if(this.sizedFonts.containsKey(_size))
@@ -229,9 +242,23 @@ public class DynamicFreeTypeFonter
     {
         for(int _i=_startCode; _i<=_endCode; _i++)
         {
-            if(codes.lastIndexOf(Character.toString((char)_i))>=0) continue;
-
-            codes.append((char)_i);
+            this.addCode(_i);
         }
+    }
+
+    public int getReferenceHeight() {
+        return referenceHeight;
+    }
+
+    public void setReferenceHeight(int referenceHeight) {
+        this.referenceHeight = referenceHeight;
+    }
+
+    public boolean isScaleToReference() {
+        return scaleToReference;
+    }
+
+    public void setScaleToReference(boolean scaleToReference) {
+        this.scaleToReference = scaleToReference;
     }
 }

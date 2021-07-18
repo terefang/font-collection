@@ -2,7 +2,9 @@ package terefang.fonts;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.PixmapPacker;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 
 import java.util.HashMap;
@@ -10,18 +12,25 @@ import java.util.Map;
 
 public class DynamicFreeTypeFonter
 {
-    public static final int normalizedSize(int _fs, boolean _noreExact)
+    public enum ScaleMode {
+        None, Vertical, Horizontal, Extend, Fit;
+    }
+
+    public static final int normalizedSize(int _fs, boolean _moreExact)
     {
         for(int _i = generalizedSizes.length-1; _i>=0; _i--)
         {
             int _s = generalizedSizes[_i];
             if(_s>_fs) continue;
 
-            if(_noreExact) return _s;
+            if(_moreExact) {
+                //System.err.println(_fs+" -> "+_s);
+                return _s;
+            }
 
             int _n = nextPowerOf2(_s);
             int _l = lastPowerOf2(_s);
-            int _m = _n - (_l>>1);
+            int _m = _l + (_l>>1);
             int _r = (_s>=_m) ? _m : _l;
             //System.err.println(_s+" = "+_n+" "+_m+" "+_l+" -> "+_r);
             return _r;
@@ -41,12 +50,7 @@ public class DynamicFreeTypeFonter
 
     public static final int lastPowerOf2(int a)
     {
-        int b = 1;
-        while(b < a)
-        {
-            b <<= 1;
-        }
-        return b>>1;
+        return nextPowerOf2(a)>>1;
     }
 
     public static final int[] generalizedSizes = {
@@ -167,11 +171,19 @@ public class DynamicFreeTypeFonter
     };
 
 
-
+    PixmapPacker pixmapPacker;
     FileHandle freetypeFilehandle;
     StringBuilder codes;
     int referenceHeight = 1080;
+    int referenceWidth = 1920;
+
+    int applicationHeight = 1080;
+    int applicationWidth = 1920;
+
     boolean scaleToReference = false;
+    ScaleMode scaleMode = ScaleMode.None;
+
+    boolean moreExactIsExact = false;
 
     public DynamicFreeTypeFonter(FileHandle _fileHandle)
     {
@@ -179,6 +191,8 @@ public class DynamicFreeTypeFonter
         this.freetypeFilehandle = _fileHandle;
         this.codes = new StringBuilder();
         this.addCodeRanges(CODERANGE_DEFAULT);
+        this.applicationHeight = Gdx.graphics.getHeight();
+        this.applicationWidth = Gdx.graphics.getWidth();
     }
 
     Map<Integer, BitmapFont> sizedFonts = new HashMap<>();
@@ -189,27 +203,67 @@ public class DynamicFreeTypeFonter
     }
     public BitmapFont getFont(int _size, boolean _moreExact)
     {
-        if(this.scaleToReference && (Gdx.graphics.getHeight() != this.referenceHeight))
+        int _rsize = _size;
+        if(this.scaleToReference)
         {
-
-            _size = ((_size*Gdx.graphics.getHeight()*100)/this.referenceHeight)/100;
+            float _hsize = ((_size*this.applicationHeight*100f)/this.referenceHeight);
+            float _wsize = ((_size*this.applicationHeight*100f)/this.referenceWidth);
+            switch(this.scaleMode)
+            {
+                case Fit:
+                case Extend:
+                    if(_hsize>_wsize)
+                    {
+                        _size = (int) (_wsize/100);
+                    }
+                    else
+                    {
+                        _size = (int) (_hsize/100);
+                    }
+                    break;
+                case Vertical:
+                    _size = (int) (_hsize/100);
+                    break;
+                case Horizontal:
+                    _size = (int) (_wsize/100);
+                    break;
+                case None:
+                default:
+                    break;
+            }
         }
-
-        int _psize = normalizedSize(_size, _moreExact);
 
         if(this.sizedFonts.containsKey(_size))
         {
             return this.sizedFonts.get(_size);
         }
 
-
+        System.err.println("---\nrsize="+_rsize);
+        System.err.println("nsize="+_size);
+        int _psize = (this.moreExactIsExact && _moreExact) ? _size : normalizedSize(_size, _moreExact);
+        System.err.println("psize="+_psize);
         FreeTypeFontGenerator.FreeTypeFontParameter _param = new FreeTypeFontGenerator.FreeTypeFontParameter();
         _param.size = _psize;
+        if(this.pixmapPacker!=null)
+        {
+            _param.packer = this.pixmapPacker;
+        }
         _param.characters=this.codes.toString();
         BitmapFont _font = new FreeTypeFontGenerator(this.freetypeFilehandle).generateFont(_param);
+        if(this.scaleToReference && (this.scaleMode==ScaleMode.Fit))
+        {
+            float _hsize = ((this.applicationHeight*100f)/this.referenceHeight)/100f;
+            float _wsize = ((this.applicationWidth*100f)/this.referenceWidth)/100f;
+            System.err.println("wscale="+((int)(_wsize*100)));
+            System.err.println("hscale="+((int)(_hsize*100)));
+            _font.getData().setScale(_wsize, _hsize);
+        }
+        else
         if(!_moreExact && _size!=_psize)
         {
-            _font.getData().setScale(((float)_size)/((float)_psize));
+            float _whscale = ((float)_size)/((float)_psize);
+            System.err.println("whscale="+((int)(_whscale*100)));
+            _font.getData().setScale(_whscale);
             _font.setUseIntegerPositions(true);
         }
         this.sizedFonts.put(_size, _font);
@@ -246,6 +300,14 @@ public class DynamicFreeTypeFonter
         }
     }
 
+    public ScaleMode getScaleMode() {
+        return scaleMode;
+    }
+
+    public void setScaleMode(ScaleMode scaleMode) {
+        this.scaleMode = scaleMode;
+    }
+
     public int getReferenceHeight() {
         return referenceHeight;
     }
@@ -254,11 +316,60 @@ public class DynamicFreeTypeFonter
         this.referenceHeight = referenceHeight;
     }
 
+    public int getReferenceWidth() {
+        return referenceWidth;
+    }
+
+    public void setReferenceWidth(int referenceWidth) {
+        this.referenceWidth = referenceWidth;
+    }
+
+    public void setReferenceSize(int referenceWidth, int referenceHeight)
+    {
+        this.referenceHeight = referenceHeight;
+        this.referenceWidth = referenceWidth;
+    }
+
     public boolean isScaleToReference() {
         return scaleToReference;
     }
 
     public void setScaleToReference(boolean scaleToReference) {
         this.scaleToReference = scaleToReference;
+    }
+
+    public int getApplicationHeight() {
+        return applicationHeight;
+    }
+
+    public void setApplicationHeight(int applicationHeight) {
+        this.applicationHeight = applicationHeight;
+    }
+
+    public int getApplicationWidth() {
+        return applicationWidth;
+    }
+
+    public void setApplicationWidth(int applicationWidth) {
+        this.applicationWidth = applicationWidth;
+    }
+
+    public void setApplicationSize(int _Width, int _Height)
+    {
+        this.applicationHeight = _Height;
+        this.applicationWidth = _Width;
+    }
+
+    public boolean isMoreExactIsExact() {
+        return moreExactIsExact;
+    }
+
+    public void setMoreExactIsExact(boolean moreExactIsExact) {
+        this.moreExactIsExact = moreExactIsExact;
+    }
+
+    public void setPixmapSize(int _s)
+    {
+        this.pixmapPacker = new PixmapPacker(_s, _s, Pixmap.Format.RGBA8888,10,false, new PixmapPacker.SkylineStrategy());
     }
 }

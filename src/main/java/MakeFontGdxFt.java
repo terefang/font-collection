@@ -60,13 +60,6 @@ public class MakeFontGdxFt
                 {
                     _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_INT_ARGB);
                 }
-                /*
-                else if(_icm.getMapSize()==2)
-                {
-                    _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_BINARY);
-                }
-
-                */
                 else
                 {
                     _im = new BufferedImage(_xyres, _xyres,BufferedImage.TYPE_BYTE_INDEXED,_icm);
@@ -155,7 +148,7 @@ public class MakeFontGdxFt
         boolean missing = face.getCharIndex(c) == 0 && c != 0;
         if (missing) return null;
 
-        face.loadChar(c, FreeType.FT_LOAD_DEFAULT | FreeType.FT_LOAD_FORCE_AUTOHINT);
+        face.loadChar(c, FreeType.FT_LOAD_DEFAULT | FreeType.FT_LOAD_FORCE_AUTOHINT | FreeType.FT_LOAD_NO_BITMAP);
 
         FreeType.GlyphSlot slot = face.getGlyph();
         return slot.getGlyph();
